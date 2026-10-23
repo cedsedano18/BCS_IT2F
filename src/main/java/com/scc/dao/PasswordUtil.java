@@ -1,3 +1,4 @@
+
 package com.scc.dao;
 
 import java.nio.charset.StandardCharsets;
@@ -27,6 +28,10 @@ public class PasswordUtil {
 
     public static boolean verifyPassword(
             String password, String storedHash) {
+
+        if (password == null || storedHash == null) {
+            return false;
+        }
 
         return hashPassword(password).equalsIgnoreCase(storedHash);
     }

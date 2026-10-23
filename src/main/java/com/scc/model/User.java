@@ -2,14 +2,20 @@
 package com.scc.model;
 
 public class User {
+
     private final int userId;
     private final String username;
     private final String fullName;
     private final String role;
     private final String status;
 
-    public User(int userId, String username,
-                String fullName, String role, String status) {
+    public User(
+            int userId,
+            String username,
+            String fullName,
+            String role,
+            String status) {
+
         this.userId = userId;
         this.username = username;
         this.fullName = fullName;

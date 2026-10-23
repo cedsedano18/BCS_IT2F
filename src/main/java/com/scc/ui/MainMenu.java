@@ -1,14 +1,19 @@
+
 package com.scc.ui;
 
 import com.scc.dao.UserDao;
 import com.scc.model.User;
-
 import java.util.Scanner;
 
 public class MainMenu {
 
-    private final Scanner scanner = new Scanner(System.in);
-    private final UserDao userDao = new UserDao();
+    private final Scanner scanner;
+    private final UserDao userDao;
+
+    public MainMenu(Scanner scanner, UserDao userDao) {
+        this.scanner = scanner;
+        this.userDao = userDao;
+    }
 
     public int showMenu() {
         System.out.println("\n==================================");
@@ -20,7 +25,7 @@ public class MainMenu {
         System.out.print("Enter your choice: ");
 
         try {
-            return Integer.parseInt(scanner.nextLine());
+            return Integer.parseInt(scanner.nextLine().trim());
         } catch (NumberFormatException e) {
             return -1;
         }
@@ -44,7 +49,7 @@ public class MainMenu {
         System.out.println("3. Barangay Official");
         System.out.print("Choose role: ");
 
-        String choice = scanner.nextLine();
+        String choice = scanner.nextLine().trim();
 
         String role = switch (choice) {
             case "1" -> "BARANGAY_ADMINISTRATOR";
@@ -53,8 +58,10 @@ public class MainMenu {
             default -> null;
         };
 
-        if (fullName.isBlank() || username.isBlank()
-                || password.isBlank() || role == null) {
+        if (fullName.isBlank()
+                || username.isBlank()
+                || password.isBlank()
+                || role == null) {
             System.out.println("Invalid input. Please try again.");
             return;
         }
@@ -62,7 +69,7 @@ public class MainMenu {
         userDao.register(username, password, fullName, role);
     }
 
-    public void loginAccount() {
+    public User loginAccount() {
         System.out.println("\n--- LOGIN ---");
 
         System.out.print("Username: ");
@@ -78,16 +85,22 @@ public class MainMenu {
                     "Login failed. Check your credentials "
                             + "or account status."
             );
-            return;
+            return null;
         }
 
         System.out.println("Login successful!");
         System.out.println("Welcome, " + user.getFullName());
         System.out.println("Role: " + user.getRole());
 
-        System.out.println("Press Enter to logout.");
-        scanner.nextLine();
+        return user;
+    }
 
+    public void waitForEnter() {
+        System.out.println("Press Enter to continue...");
+        scanner.nextLine();
+    }
+
+    public void logout() {
         System.out.println("Logout successful!");
     }
 }

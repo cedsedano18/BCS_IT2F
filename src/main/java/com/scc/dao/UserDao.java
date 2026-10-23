@@ -1,3 +1,4 @@
+
 package com.scc.dao;
 
 import com.scc.model.User;
@@ -17,8 +18,8 @@ public class UserDao {
 
         String sql = """
                 INSERT INTO USERS
-                (username, password_hash, full_name, role)
-                VALUES (?, ?, ?, ?)
+                (username, password, full_name, role, status)
+                VALUES (?, ?, ?, ?, 'PENDING')
                 """;
 
         try (Connection con = DatabaseConnection.getConnection();
@@ -26,7 +27,8 @@ public class UserDao {
 
             ps.setString(1, username);
 
-            // Save the actual password instead of its hash.
+            // Save the entered password directly
+            // for the classroom demonstration.
             ps.setString(2, password);
 
             ps.setString(3, fullName);
@@ -36,13 +38,21 @@ public class UserDao {
 
             System.out.println("Registration successful!");
             System.out.println("Account status: PENDING");
+            System.out.println(
+                    "Please wait for an administrator to activate your account.");
 
             return true;
 
         } catch (SQLException e) {
-            System.out.println(
-                    "Registration failed: " + e.getMessage()
-            );
+            if (e.getMessage() != null
+                    && e.getMessage().toLowerCase().contains("unique")) {
+                System.out.println(
+                        "Registration failed: Username already exists.");
+            } else {
+                System.out.println(
+                        "Registration failed: " + e.getMessage());
+            }
+
             return false;
         }
     }
@@ -50,9 +60,10 @@ public class UserDao {
     public User login(String username, String password) {
 
         String sql = """
-                SELECT * FROM USERS
+                SELECT user_id, username, password,
+                       full_name, role, status
+                FROM USERS
                 WHERE username = ?
-                AND password_hash = ?
                 AND status = 'Active'
                 """;
 
@@ -61,26 +72,41 @@ public class UserDao {
 
             ps.setString(1, username);
 
-            // Compare the entered password directly.
-            ps.setString(2, password);
-
             try (ResultSet rs = ps.executeQuery()) {
 
                 if (rs.next()) {
-                    return new User(
-                            rs.getInt("user_id"),
-                            rs.getString("username"),
-                            rs.getString("full_name"),
-                            rs.getString("role"),
-                            rs.getString("status")
-                    );
+                    String storedPassword = rs.getString("password");
+
+                    boolean passwordMatches;
+
+                    if (storedPassword != null
+                            && storedPassword.matches("[0-9a-fA-F]{64}")) {
+
+                        // Support existing SHA-256 hashed accounts.
+                        passwordMatches =
+                                PasswordUtil.verifyPassword(
+                                        password, storedPassword);
+                    } else {
+                        // Support existing plain-text accounts.
+                        passwordMatches =
+                                password.equals(storedPassword);
+                    }
+
+                    if (passwordMatches) {
+                        return new User(
+                                rs.getInt("user_id"),
+                                rs.getString("username"),
+                                rs.getString("full_name"),
+                                rs.getString("role"),
+                                rs.getString("status")
+                        );
+                    }
                 }
             }
 
         } catch (SQLException e) {
             System.out.println(
-                    "Login error: " + e.getMessage()
-            );
+                    "Login error: " + e.getMessage());
         }
 
         return null;
