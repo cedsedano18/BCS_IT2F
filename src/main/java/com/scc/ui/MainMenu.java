@@ -1,8 +1,8 @@
-
 package com.scc.ui;
 
 import com.scc.dao.UserDao;
 import com.scc.model.User;
+
 import java.util.Scanner;
 
 public class MainMenu {
@@ -16,9 +16,10 @@ public class MainMenu {
     }
 
     public int showMenu() {
-        System.out.println("\n==================================");
+
+        System.out.println("\n======================================");
         System.out.println(" BARANGAY CLEARANCE ISSUANCE SYSTEM");
-        System.out.println("==================================");
+        System.out.println("======================================");
         System.out.println("1. Register Account");
         System.out.println("2. Login");
         System.out.println("3. Exit");
@@ -32,6 +33,7 @@ public class MainMenu {
     }
 
     public void registerAccount() {
+
         System.out.println("\n--- REGISTER ACCOUNT ---");
 
         System.out.print("Full name: ");
@@ -62,7 +64,10 @@ public class MainMenu {
                 || username.isBlank()
                 || password.isBlank()
                 || role == null) {
-            System.out.println("Invalid input. Please try again.");
+
+            System.out.println(
+                    "Invalid input. Please check your information."
+            );
             return;
         }
 
@@ -70,6 +75,7 @@ public class MainMenu {
     }
 
     public User loginAccount() {
+
         System.out.println("\n--- LOGIN ---");
 
         System.out.print("Username: ");
@@ -82,21 +88,21 @@ public class MainMenu {
 
         if (user == null) {
             System.out.println(
-                    "Login failed. Check your credentials "
-                            + "or account status."
+                    "Login failed. Check your credentials or account status."
             );
             return null;
         }
 
-        System.out.println("Login successful!");
+        System.out.println("\nLogin successful!");
         System.out.println("Welcome, " + user.getFullName());
         System.out.println("Role: " + user.getRole());
+        System.out.println("Status: " + user.getStatus());
 
         return user;
     }
 
     public void waitForEnter() {
-        System.out.println("Press Enter to continue...");
+        System.out.println("\nPress Enter to continue...");
         scanner.nextLine();
     }
 
