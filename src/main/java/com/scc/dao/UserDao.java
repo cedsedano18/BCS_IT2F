@@ -1,3 +1,4 @@
+
 package com.scc.dao;
 
 import com.scc.model.User;
@@ -8,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class UserDao {
 
@@ -29,7 +31,7 @@ public class UserDao {
             ps.setString(1, username);
             ps.setString(2, password);
             ps.setString(3, fullName);
-            ps.setString(4, role);
+            ps.setString(4, role.toUpperCase(Locale.ROOT));
 
             ps.executeUpdate();
 
@@ -175,6 +177,37 @@ public class UserDao {
         } catch (SQLException e) {
             System.out.println(
                     "Error approving user: " + e.getMessage()
+            );
+            return false;
+        }
+    }
+
+    // PF201 DELIVERABLE 7
+    // Update a user's role and account status.
+
+    public boolean updateUserRoleAndStatus(
+            int userId,
+            String newRole,
+            String newStatus) {
+
+        String sql = """
+            UPDATE USERS
+            SET role = ?, status = ?
+            WHERE user_id = ?
+            """;
+
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, newRole.toUpperCase(Locale.ROOT));
+            ps.setString(2, newStatus.toUpperCase(Locale.ROOT));
+            ps.setInt(3, userId);
+
+            return ps.executeUpdate() == 1;
+
+        } catch (SQLException e) {
+            System.out.println(
+                    "Error updating user: " + e.getMessage()
             );
             return false;
         }

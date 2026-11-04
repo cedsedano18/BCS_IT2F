@@ -1,3 +1,4 @@
+
 package com.scc.ui;
 
 import com.scc.model.User;
@@ -24,6 +25,7 @@ public class Authentication {
             int choice = menu.showMenu();
 
             switch (choice) {
+
                 case 1 -> {
                     menu.registerAccount();
                     menu.waitForEnter();
@@ -63,7 +65,9 @@ public class Authentication {
                 System.out.println(
                         "\nOpening Administrator Management..."
                 );
-                adminMenu.start();
+
+                // Pass the currently logged-in admin.
+                adminMenu.start(user);
             }
 
             case "BARANGAY_STAFF" -> {
