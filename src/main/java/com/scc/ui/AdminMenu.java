@@ -2,15 +2,19 @@
 package com.scc.ui;
 
 import com.scc.dao.UserDao;
+import com.scc.dao.ActivityLogDao;
 import com.scc.model.User;
+import com.scc.model.ActivityLog;
 
 import java.util.List;
 import java.util.Scanner;
+import java.sql.SQLException;
 
 public class AdminMenu {
 
     private final Scanner scanner;
     private final UserDao userDao;
+    private final ActivityLogDao activityLogDao;
 
     private static final String[] VALID_ROLES = {
             "BARANGAY_ADMINISTRATOR",
@@ -26,7 +30,10 @@ public class AdminMenu {
     public AdminMenu(Scanner scanner, UserDao userDao) {
         this.scanner = scanner;
         this.userDao = userDao;
+        this.activityLogDao = new ActivityLogDao();
     }
+
+    // ADMIN MAIN MENU
 
     public void start(User currentAdmin) {
 
@@ -41,7 +48,8 @@ public class AdminMenu {
             System.out.println("2. View Pending Registrations");
             System.out.println("3. Approve User Account");
             System.out.println("4. Update User Role and Status");
-            System.out.println("5. Logout");
+            System.out.println("5. View System Audit Logs");
+            System.out.println("6. Logout");
             System.out.print("Enter your choice: ");
 
             String choice = scanner.nextLine().trim();
@@ -59,7 +67,7 @@ public class AdminMenu {
                 }
 
                 case "3" -> {
-                    approveAccount();
+                    approveAccount(currentAdmin);
                     pause();
                 }
 
@@ -68,7 +76,9 @@ public class AdminMenu {
                     pause();
                 }
 
-                case "5" -> {
+                case "5" -> viewAuditLogs(currentAdmin);
+
+                case "6" -> {
                     System.out.println("Admin logout successful!");
                     running = false;
                 }
@@ -83,6 +93,11 @@ public class AdminMenu {
     // UPDATE USER FEATURE
 
     private void updateUser(User currentAdmin) {
+
+        if (currentAdmin == null) {
+            System.out.println("Admin session not found.");
+            return;
+        }
 
         List<User> users = userDao.getAllUsers();
 
@@ -117,8 +132,7 @@ public class AdminMenu {
 
         // SELF-EDIT SECURITY RESTRICTION
 
-        if (currentAdmin != null
-                && currentAdmin.getUserId() == targetUserId
+        if (currentAdmin.getUserId() == targetUserId
                 && currentAdmin.getRole().equalsIgnoreCase(
                 "BARANGAY_ADMINISTRATOR")
                 && (currentAdmin.getStatus().equalsIgnoreCase("APPROVED")
@@ -155,7 +169,10 @@ public class AdminMenu {
         System.out.println("New Status: " + newStatus);
 
         if (userDao.updateUserRoleAndStatus(
-                targetUserId, newRole, newStatus)) {
+                targetUserId,
+                newRole,
+                newStatus,
+                currentAdmin.getUserId())) {
 
             System.out.println("\n==================================");
             System.out.println("USER UPDATED SUCCESSFULLY!");
@@ -171,7 +188,7 @@ public class AdminMenu {
         }
     }
 
-    // INPUT VALIDATION: INTEGER
+    // INTEGER INPUT VALIDATION
 
     private int readIntInput(String prompt) {
 
@@ -192,7 +209,7 @@ public class AdminMenu {
         }
     }
 
-    // INPUT VALIDATION: ROLE
+    // ROLE VALIDATION
 
     private String readValidRole() {
 
@@ -231,7 +248,7 @@ public class AdminMenu {
         }
     }
 
-    // INPUT VALIDATION: STATUS
+    // STATUS VALIDATION
 
     private String readValidStatus() {
 
@@ -270,7 +287,12 @@ public class AdminMenu {
 
     // APPROVE ACCOUNT
 
-    private void approveAccount() {
+    private void approveAccount(User currentAdmin) {
+
+        if (currentAdmin == null) {
+            System.out.println("Admin session not found.");
+            return;
+        }
 
         List<User> pendingUsers = userDao.getPendingUsers();
 
@@ -284,7 +306,9 @@ public class AdminMenu {
 
         System.out.println("Enter 0 to cancel approval.");
 
-        int userId = readIntInput("Enter User ID to approve: ");
+        int userId = readIntInput(
+                "Enter User ID to approve: "
+        );
 
         if (userId == 0) {
             System.out.println("Approval cancelled.");
@@ -301,14 +325,215 @@ public class AdminMenu {
             return;
         }
 
-        if (userDao.approveUser(userId)) {
+        if (userDao.approveUser(
+                userId,
+                currentAdmin.getUserId())) {
+
             System.out.println("Account approved successfully!");
             System.out.println("New status: APPROVED");
+
         } else {
             System.out.println(
                     "Approval failed. The account may no longer be pending."
             );
         }
+    }
+
+    // SYSTEM AUDIT LOG MENU
+
+    private void viewAuditLogs(User currentAdmin) {
+
+        boolean viewing = true;
+
+        while (viewing) {
+
+            System.out.println("\n========================================");
+            System.out.println("          SYSTEM AUDIT LOGS");
+            System.out.println("========================================");
+            System.out.println("1. View All System Logs");
+            System.out.println("2. Filter Logs by User ID");
+            System.out.println("3. Clear Historical Logs");
+            System.out.println("4. Back to Admin Menu");
+            System.out.print("Enter your choice: ");
+
+            String choice = scanner.nextLine().trim();
+
+            switch (choice) {
+
+                case "1" -> {
+
+                    try {
+                        List<ActivityLog> logs =
+                                activityLogDao.getAllLogs();
+
+                        displayAuditLogs(logs);
+
+                    } catch (SQLException e) {
+                        System.out.println(
+                                "Error retrieving logs: " + e.getMessage()
+                        );
+                    }
+
+                    pause();
+                }
+
+                case "2" -> {
+
+                    int userId = readIntInput(
+                            "Enter User ID to filter: "
+                    );
+
+                    if (userId == 0) {
+                        System.out.println("Filtering cancelled.");
+                        break;
+                    }
+
+                    try {
+                        List<ActivityLog> logs =
+                                activityLogDao.getLogsByUserId(userId);
+
+                        displayAuditLogs(logs);
+
+                    } catch (SQLException e) {
+                        System.out.println(
+                                "Error filtering logs: " + e.getMessage()
+                        );
+                    }
+
+                    pause();
+                }
+
+                case "3" -> {
+                    clearHistoricalLogs(currentAdmin);
+                    pause();
+                }
+
+                case "4" -> viewing = false;
+
+                default -> System.out.println(
+                        "Invalid choice. Please try again."
+                );
+            }
+        }
+    }
+
+    // CLEAR HISTORICAL AUDIT LOGS
+
+    private void clearHistoricalLogs(User currentAdmin) {
+
+        if (currentAdmin == null) {
+            System.out.println("Admin session not found.");
+            return;
+        }
+
+        try {
+
+            List<ActivityLog> logs =
+                    activityLogDao.getAllLogs();
+
+            if (logs == null || logs.isEmpty()) {
+                System.out.println("\nNo historical logs available to clear.");
+                return;
+            }
+
+            System.out.println("\n========================================");
+            System.out.println("         CLEAR HISTORICAL LOGS");
+            System.out.println("========================================");
+            System.out.println("Total logs found: " + logs.size());
+
+            System.out.println(
+                    "\nWARNING: This action will permanently delete historical audit logs."
+            );
+
+            System.out.print("Are you sure you want to continue? (Y/N): ");
+
+            String confirmation = scanner.nextLine().trim();
+
+            if (!confirmation.equalsIgnoreCase("Y")) {
+                System.out.println("Log clearing cancelled. No logs were deleted.");
+                return;
+            }
+
+            int deletedCount = activityLogDao.clearAllLogs();
+
+            System.out.println("\n========================================");
+            System.out.println("HISTORICAL LOGS CLEARED SUCCESSFULLY!");
+            System.out.println("Deleted Logs: " + deletedCount);
+            System.out.println("Admin ID: " + currentAdmin.getUserId());
+            System.out.println("========================================");
+
+            // Record the clearing action after deleting old logs.
+
+            try {
+
+                activityLogDao.logAction(
+                        currentAdmin.getUserId(),
+                        "LOGS_CLEARED",
+                        "Administrator cleared " + deletedCount
+                                + " historical activity logs."
+                );
+
+                System.out.println(
+                        "Audit record for the clearing action was saved."
+                );
+
+            } catch (SQLException e) {
+
+                System.out.println(
+                        "Warning: Logs were cleared, but the clearing action "
+                                + "could not be recorded: " + e.getMessage()
+                );
+            }
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Error clearing historical logs: " + e.getMessage()
+            );
+        }
+    }
+
+    // DISPLAY AUDIT LOGS
+
+    private void displayAuditLogs(List<ActivityLog> logs) {
+
+        System.out.println(
+                "\n================ SYSTEM AUDIT HISTORY ================"
+        );
+
+        if (logs == null || logs.isEmpty()) {
+            System.out.println("No activity logs found.");
+            return;
+        }
+
+        String border = "-".repeat(105);
+
+        System.out.println(border);
+
+        System.out.printf(
+                "%-5s | %-8s | %-18s | %-35s | %-20s%n",
+                "ID",
+                "USER ID",
+                "ACTION",
+                "DESCRIPTION",
+                "TIMESTAMP"
+        );
+
+        System.out.println(border);
+
+        for (ActivityLog log : logs) {
+
+            System.out.printf(
+                    "%-5d | %-8d | %-18.18s | %-35.35s | %-20.20s%n",
+                    log.getLogId(),
+                    log.getUserId(),
+                    log.getAction(),
+                    log.getDescription(),
+                    log.getLogTimestamp()
+            );
+        }
+
+        System.out.println(border);
     }
 
     // DISPLAY USERS
@@ -347,6 +572,8 @@ public class AdminMenu {
 
         System.out.println(border);
     }
+
+    // PAUSE
 
     private void pause() {
         System.out.println("\nPress Enter to continue...");

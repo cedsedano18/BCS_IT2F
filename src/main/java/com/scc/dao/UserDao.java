@@ -13,6 +13,8 @@ import java.util.Locale;
 
 public class UserDao {
 
+    private final ActivityLogDao activityLogDao = new ActivityLogDao();
+
     public boolean register(
             String username,
             String password,
@@ -158,7 +160,9 @@ public class UserDao {
         return users;
     }
 
-    public boolean approveUser(int userId) {
+    // DELIVERABLE 5 AND 8: APPROVE USER WITH ACTIVITY LOG
+
+    public boolean approveUser(int userId, int adminId) {
 
         String sql = """
             UPDATE USERS
@@ -172,7 +176,21 @@ public class UserDao {
 
             ps.setInt(1, userId);
 
-            return ps.executeUpdate() == 1;
+            int rowsUpdated = ps.executeUpdate();
+
+            if (rowsUpdated == 1) {
+
+                recordActivity(
+                        adminId,
+                        "USER_APPROVED",
+                        "Admin [ID " + adminId
+                                + "] approved account for User ID " + userId
+                );
+
+                return true;
+            }
+
+            return false;
 
         } catch (SQLException e) {
             System.out.println(
@@ -182,13 +200,16 @@ public class UserDao {
         }
     }
 
-    // PF201 DELIVERABLE 7
-    // Update a user's role and account status.
+    // DELIVERABLE 7 AND 8: UPDATE ROLE/STATUS WITH ACTIVITY LOG
 
     public boolean updateUserRoleAndStatus(
             int userId,
             String newRole,
-            String newStatus) {
+            String newStatus,
+            int adminId) {
+
+        String role = newRole.toUpperCase(Locale.ROOT);
+        String status = newStatus.toUpperCase(Locale.ROOT);
 
         String sql = """
             UPDATE USERS
@@ -199,17 +220,55 @@ public class UserDao {
         try (Connection con = DatabaseConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setString(1, newRole.toUpperCase(Locale.ROOT));
-            ps.setString(2, newStatus.toUpperCase(Locale.ROOT));
+            ps.setString(1, role);
+            ps.setString(2, status);
             ps.setInt(3, userId);
 
-            return ps.executeUpdate() == 1;
+            int rowsUpdated = ps.executeUpdate();
+
+            if (rowsUpdated == 1) {
+
+                recordActivity(
+                        adminId,
+                        "USER_UPDATED",
+                        "Admin [ID " + adminId
+                                + "] changed role of User " + userId
+                                + " to " + role
+                                + " and status to " + status
+                );
+
+                return true;
+            }
+
+            return false;
 
         } catch (SQLException e) {
             System.out.println(
                     "Error updating user: " + e.getMessage()
             );
             return false;
+        }
+    }
+
+    // SAVE ACTIVITY TO DATABASE
+
+    private void recordActivity(
+            int adminId,
+            String actionType,
+            String description) {
+
+        try {
+            activityLogDao.logAction(
+                    adminId,
+                    actionType,
+                    description
+            );
+
+        } catch (SQLException e) {
+            System.out.println(
+                    "WARNING: User action succeeded, but activity logging failed: "
+                            + e.getMessage()
+            );
         }
     }
 

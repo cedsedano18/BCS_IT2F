@@ -21,7 +21,7 @@ public class Main {
                     "System startup failed. Please check the database."
             );
             return;
-        }
+        }2
 
         try (Scanner scanner = new Scanner(System.in)) {
 
