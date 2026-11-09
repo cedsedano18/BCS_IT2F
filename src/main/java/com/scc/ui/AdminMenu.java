@@ -79,7 +79,31 @@ public class AdminMenu {
                 case "5" -> viewAuditLogs(currentAdmin);
 
                 case "6" -> {
-                    System.out.println("Admin logout successful!");
+
+                    // RECORD ADMIN LOGOUT
+
+                    try {
+                        activityLogDao.logAction(
+                                currentAdmin.getUserId(),
+                                "USER_LOGOUT",
+                                "Admin " + currentAdmin.getUsername()
+                                        + " (ID: " + currentAdmin.getUserId()
+                                        + ") logged out."
+                        );
+
+                        System.out.println(
+                                "Admin logout successful!"
+                        );
+
+                    } catch (SQLException e) {
+
+                        System.out.println(
+                                "Warning: Logout successful, but audit log "
+                                        + "could not be saved: "
+                                        + e.getMessage()
+                        );
+                    }
+
                     running = false;
                 }
 
@@ -462,7 +486,7 @@ public class AdminMenu {
             System.out.println("Admin ID: " + currentAdmin.getUserId());
             System.out.println("========================================");
 
-            // Record the clearing action after deleting old logs.
+            // RECORD LOG CLEARING ACTION
 
             try {
 

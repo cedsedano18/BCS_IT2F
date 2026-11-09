@@ -1,3 +1,4 @@
+
 package com.scc.dao;
 
 import java.sql.Connection;
@@ -45,6 +46,33 @@ public class DatabaseInitializer {
         )
         """;
 
+    // BARANGAY CLEARANCE REQUESTS TABLE
+
+    private static final String CREATE_CLEARANCE_REQUESTS_SQL = """
+        CREATE TABLE IF NOT EXISTS CLEARANCE_REQUESTS (
+            request_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_name TEXT NOT NULL,
+            address TEXT NOT NULL,
+            purpose TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDING'
+                CHECK (
+                    status IN (
+                        'PENDING',
+                        'APPROVED',
+                        'REJECTED',
+                        'ISSUED'
+                    )
+                ),
+            encoded_by INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+                DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT NOT NULL
+                DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (encoded_by)
+                REFERENCES USERS(user_id)
+        )
+        """;
+
     public static boolean initialize() {
 
         try (Connection connection = DatabaseConnection.getConnection();
@@ -54,21 +82,36 @@ public class DatabaseInitializer {
 
             if (usersTableSQL == null) {
                 statement.executeUpdate(CREATE_USERS_SQL);
+
             } else if (needsMigration(usersTableSQL)) {
                 migrateUsersTable(connection);
             }
 
+            // CREATE ACTIVITY LOGS TABLE
+
             try (Statement logStatement = connection.createStatement()) {
                 logStatement.executeUpdate(CREATE_LOGS_SQL);
+            }
+
+            // CREATE CLEARANCE REQUESTS TABLE
+
+            try (Statement clearanceStatement =
+                         connection.createStatement()) {
+
+                clearanceStatement.executeUpdate(
+                        CREATE_CLEARANCE_REQUESTS_SQL
+                );
             }
 
             System.out.println("Database initialized successfully.");
             return true;
 
         } catch (SQLException e) {
+
             System.out.println(
                     "Database initialization failed: " + e.getMessage()
             );
+
             return false;
         }
     }
@@ -83,6 +126,7 @@ public class DatabaseInitializer {
             """;
 
         try (ResultSet rs = statement.executeQuery(sql)) {
+
             if (rs.next()) {
                 return rs.getString("sql");
             }
@@ -92,6 +136,7 @@ public class DatabaseInitializer {
     }
 
     private static boolean needsMigration(String tableSQL) {
+
         String normalized = tableSQL.toUpperCase();
 
         return !normalized.contains("'PENDING'")
@@ -106,12 +151,12 @@ public class DatabaseInitializer {
 
         try (Statement statement = connection.createStatement()) {
 
-            // Disable foreign keys before starting the migration transaction.
             statement.execute("PRAGMA foreign_keys = OFF");
 
             connection.setAutoCommit(false);
 
             try {
+
                 statement.executeUpdate("""
                     CREATE TABLE USERS_NEW (
                         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -149,7 +194,8 @@ public class DatabaseInitializer {
                         role,
                         CASE
                             WHEN status IN (
-                                'PENDING', 'APPROVED', 'Active', 'Inactive'
+                                'PENDING', 'APPROVED',
+                                'Active', 'Inactive'
                             )
                             THEN status
                             ELSE 'PENDING'
@@ -158,6 +204,7 @@ public class DatabaseInitializer {
                     """);
 
                 statement.executeUpdate("DROP TABLE USERS");
+
                 statement.executeUpdate(
                         "ALTER TABLE USERS_NEW RENAME TO USERS"
                 );
@@ -165,9 +212,12 @@ public class DatabaseInitializer {
                 connection.commit();
 
             } catch (SQLException e) {
+
                 connection.rollback();
                 throw e;
+
             } finally {
+
                 connection.setAutoCommit(originalAutoCommit);
                 statement.execute("PRAGMA foreign_keys = ON");
             }

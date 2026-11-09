@@ -1,3 +1,4 @@
+
 package com.scc;
 
 import com.scc.dao.DatabaseInitializer;
@@ -21,7 +22,7 @@ public class Main {
                     "System startup failed. Please check the database."
             );
             return;
-        }2
+        }
 
         try (Scanner scanner = new Scanner(System.in)) {
 
@@ -31,7 +32,7 @@ public class Main {
             AdminMenu adminMenu = new AdminMenu(scanner, userDao);
 
             Authentication authentication =
-                    new Authentication(mainMenu, adminMenu);
+                    new Authentication(mainMenu, adminMenu, scanner);
 
             authentication.start();
         }
